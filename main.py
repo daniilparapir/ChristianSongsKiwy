@@ -1,57 +1,46 @@
-# main.py — Христианский песенник (песни прямо в коде)
 from kivy.lang import Builder
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, NumericProperty, ListProperty
 from kivy.metrics import dp
+from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.list import OneLineAvatarListItem, ImageLeftWidget
+from kivymd.uix.list import OneLineListItem
 
 
-# ----------- KV-разметка интерфейса
 KV = '''
-<GradientBg@Widget>:
+<MainScreen>:
     canvas.before:
         Color:
-            rgba: (0.12, 0.14, 0.36, 1)  # тёмно-фиолетовый
+            rgba: app.bg_color
         Rectangle:
             pos: self.pos
             size: self.size
-        Color:
-            rgba: (0.12, 0.14, 0.36, 1)  # светло-фиолетовый
-        Rectangle:
-            pos: self.x, self.y + self.height / 2
-            size: self.width, self.height / 2
 
-<MainScreen>:
-    name: "main"
     FloatLayout:
-        GradientBg:
-            pos: self.pos
-            size: self.size
-
         MDBoxLayout:
             orientation: "vertical"
             padding: dp(12)
             spacing: dp(10)
-            size_hint: 1, 1
 
             MDTopAppBar:
+                id: topbar
                 title: "Христианский песенник"
-                elevation: 8
-                md_bg_color: 0, 0, 0, 0  # прозрачный
-                specific_text_color: 1, 1, 1, 1  # белый текст
+                elevation: 0
+                md_bg_color: 0.188, 0.188, 0.188, 1
+                specific_text_color: app.title_text_color
+                right_action_items: [["theme-light-dark", lambda x: app.toggle_theme()]]
 
             MDTextField:
-                id: search_field
+                id: search
                 hint_text: "Поиск песни…"
                 mode: "rectangle"
                 icon_right: "magnify"
                 on_text: app.filter_songs(self.text)
-                fill_color: 0.2, 0.2, 0.2, 1  # тёмное поле
-                text_color: 1, 1, 1, 1
+                fill_color: (0.15, 0.15, 0.2, 0.9) if app.is_dark else (0.85, 0.85, 0.85, 0.9)
+                text_color: (1, 1, 1, 1) if app.is_dark else (0, 0, 0, 1)
                 hint_text_color: 0.7, 0.7, 0.7, 1
-                line_color_focus: 1, 1, 1, 1
+                line_color_focus: (1, 1, 1, 1) if app.is_dark else (0, 0, 0, 1)
 
             ScrollView:
                 MDList:
@@ -59,212 +48,179 @@ KV = '''
 
 
 <SongScreen>:
-    name: "song"
     song_title: ""
     lyrics: ""
-    FloatLayout:
-        GradientBg:
+
+    canvas.before:
+        Color:
+            rgba: app.bg_color
+        Rectangle:
             pos: self.pos
             size: self.size
 
+    FloatLayout:
         MDBoxLayout:
             orientation: "vertical"
             padding: dp(12)
             spacing: dp(10)
-            size_hint: 1, 1
 
             MDTopAppBar:
                 title: root.song_title
                 left_action_items: [["arrow-left", lambda x: app.back_to_list()]]
-                elevation: 8
-                md_bg_color: 0, 0, 0, 0
-                specific_text_color: 1, 1, 1, 1
+                elevation: 0
+                md_bg_color: 0.188, 0.188, 0.188, 1
+                specific_text_color: app.title_text_color
+                right_action_items: [["theme-light-dark", lambda x: app.toggle_theme()]]
 
             ScrollView:
                 MDLabel:
                     id: lyrics_label
                     text: root.lyrics
                     markup: True
-                    font_style: "Body1"
                     halign: "left"
-                    color: 1, 1, 1, 1
+                    color: (1, 1, 1, 1) if app.is_dark else (0, 0, 0, 1)
                     padding: dp(6), dp(6)
                     size_hint_y: None
                     height: self.texture_size[1]
+                    font_size: app.current_font_size
+
+
+ScreenManager:
+    id: screen_manager
+
+    MainScreen:
+        name: "main"
+
+    SongScreen:
+        name: "song"
 '''
 
-# ----------- Экраны
+
 class MainScreen(MDScreen):
     pass
+
 
 class SongScreen(MDScreen):
     song_title = StringProperty()
     lyrics = StringProperty()
 
 
-# ----------- Приложение
 class HymnalApp(MDApp):
+    current_font_size = NumericProperty(18)
+    is_dark = True
+
+    # Цвета и настройки, управляемые темой
+    title_text_color = ListProperty([1, 1, 1, 1])  # белый по умолчанию
+    bg_color = ListProperty([0.1, 0.1, 0.1, 1])   # темный фон по умолчанию
+
     def build(self):
-        self.icon = "atlas://data/images/defaulttheme/audio-volume-high"
         self.theme_cls.primary_palette = "BlueGray"
         self.theme_cls.accent_palette = "Amber"
         self.theme_cls.theme_style = "Dark"
 
         Builder.load_string(KV)
 
+        # Песни
         self.songs = [
             {
                 "number": 1,
-                "title": "О Молитва, О Молитва",
-                "lyrics": """О молитва, о молитва Песнь Возрождения
+                "title": "Твоя милость",
+                "lyrics": """Твоя милость превозносится надо мной,
+Осеняя, как крылья орла.
+И я знаю — среди бури земной
+Ты укроешь меня у стола.
 
-1 куплет:  
-  Am                            Dm
-О молитва, о молитва!
-                  Am           E7    Am
-В жизни Богом ты дана.
-    Am                                    Dm
-В скорбной жизни среди битвы
-           Am         E7      Am   A7
-Поднимала ты меня.
-                 Dm                  G
-Темной ночью я не спал,
-               C             F
-На коленях все стоял
-               Dm      E             Am  A7
-И душою с Богом говорил:
-               Dm                      G
-"Ты услышь меня, мой Бог,
-               C                    F
-Среди жизненных тревог
-             Dm           E            Am
-Помоги, я выбился из сил!"
-
-2 куплет:  
-За окном бушует ветер,
-Хлещет снегом ледяным
-И такой же бурей в сердце
-В этот вечер я томим.
-Но, смирившийся во прах,
-Со слезами на очах
-Я в скорбях Иисуса умолял:
-"О мой Бог! Ты знаешь все,
-На душе так тяжело,
-Я измучен и почти упал".
-
-3 куплет:  
-Боже мой, я жизни легкой
-И беспечной не хочу,
-Пусть страдания и скорби
-На пути своем найду.
-Об одном прошу лишь я,
-Чтоб я чувствовал всегда,
-Как Твоя всесильная рука
-На плечах лежит моих
-И среди житейских битв
-Ободряет ласково меня.
-
-4 куплет:  
-О молитва, о молитва!
-Благодарностью горю,
-Прославляю Божью силу,
-Благодати глубину.
-Боже! Ты в любви святой
-Укреплял дух слабый мой,
-Когда в бурю падал я без сил.
-К небесам сердечный вздох
-Возносился средь тревог,
-Я в молитве радость получал.
-"""
+[b]Припев:[/b]
+Твоя милость… Твоя милость…
+Превозносится надо мной!"""
             },
             {
                 "number": 2,
-                "title": "За любовь за милость",
-                "lyrics": """За любовь, за милость, за спасение Песнь Возрождения
+                "title": "Наш Бог велик",
+                "lyrics": """Свет во тьме сияет,
+Наш Бог, Ты так велик!
+И каждый пусть познает,
+Наш Бог, Ты так велик!
 
-1 куплет:  
-Am                   Dm
-За любовь, за милость, за спасение,
- E7                                                Am   E7
-Благодарность Ты прими от нас.
- Am                Dm
-Пусть несется песнь благодарения
- E7                                               Am
-Господу - Он кровию нас спас.
-
-Припев:  
-  Am          Dm7       G7            C-E7
-Благодарим, благодарим, за Твою любовь благодарим!
- Am         Dm7          E7            Am
-Достоин Ты вечной хвалы, за Твою любовь благодарим!
-
-2 куплет:  
-За Твои Голгофские страдания,
-За спасенье, данное Тобой,
-И за все Твои благодеяния
-Сердце для Тебя звучит хвалой!
-
-3 куплет:  
-За прекрасный дом в лазурном небе,
-За святую вечность без конца
-Пусть звучит сегодня гимн хваления,
-Эту песнь поют наши сердца.
-"""
-            },
-            {
-                "number": 3,
-                "title": "Господь — моя скала",
-                "lyrics": """Господь — моя скала и прибежище,  
-Моя защита и сила в беде.  
-Я уповаю на имя Его —  
-Он не оставит меня никогда!"""
+[b]Припев:[/b]
+Наш Бог велик — пой со мной:
+Наш Бог велик — пусть видит весь народ:
+Наш Бог, наш Бог велик!"""
             },
         ]
 
         self.sm = MDScreenManager()
-        self.main_screen = MainScreen()
-        self.song_screen = SongScreen()
+        self.main_screen = MainScreen(name="main")
+        self.song_screen = SongScreen(name="song")
         self.sm.add_widget(self.main_screen)
         self.sm.add_widget(self.song_screen)
 
+        # Начальные цвета для темы
+        self.title_text_color = [1, 1, 1, 1]
+        self.bg_color = [0.188, 0.188, 0.188, 1]
+
         self.populate_song_list()
+        Window.bind(on_key_down=self.on_key_down)
+
         return self.sm
 
-    # Создание кнопки песни
-    def make_song_button(self, index, title):
-        item = OneLineAvatarListItem(text=title)
-        item.add_widget(ImageLeftWidget(source="atlas://data/images/defaulttheme/audio-volume-high"))
-        item.bind(on_release=lambda instance: self.open_song(index))
-        return item
-
-    # Показ всех песен
     def populate_song_list(self):
-        song_list = self.main_screen.ids.song_list
-        song_list.clear_widgets()
+        list_widget = self.main_screen.ids.song_list
+        list_widget.clear_widgets()
         for idx, song in enumerate(self.songs):
-            item = self.make_song_button(idx, f"{song['number']}. {song['title']}")
-            song_list.add_widget(item)
+            item = OneLineListItem(text=f"{song['number']}. {song['title']}")
+            item.bind(on_release=lambda inst, i=idx: self.open_song(i))
+            list_widget.add_widget(item)
 
-    # Поиск
     def filter_songs(self, query):
         query = query.lower()
-        song_list = self.main_screen.ids.song_list
-        song_list.clear_widgets()
+        list_widget = self.main_screen.ids.song_list
+        list_widget.clear_widgets()
         for idx, song in enumerate(self.songs):
             if query in song["title"].lower():
-                item = self.make_song_button(idx, f"{song['number']}. {song['title']}")
-                song_list.add_widget(item)
+                item = OneLineListItem(text=f"{song['number']}. {song['title']}")
+                item.bind(on_release=lambda inst, i=idx: self.open_song(i))
+                list_widget.add_widget(item)
 
-    # Открытие песни
     def open_song(self, index):
         song = self.songs[index]
         self.song_screen.song_title = song["title"]
         self.song_screen.lyrics = song["lyrics"]
+        self.song_screen.ids.lyrics_label.font_size = self.current_font_size
         self.sm.current = "song"
 
-    # Назад
     def back_to_list(self):
         self.sm.current = "main"
+
+    def toggle_theme(self):
+        if self.is_dark:
+            # переключаем на светлую тему
+            self.title_text_color = [0, 0, 0, 1]  # чёрный текст
+            self.bg_color = [1, 1, 1, 1]           # светлый фон
+            self.theme_cls.theme_style = "Light"
+            self.is_dark = False
+        else:
+            # переключаем на темную тему
+            self.title_text_color = [1, 1, 1, 1]  # белый текст
+            self.bg_color = [0.188, 0.188, 0.188, 1]  # тёмно-серый фон
+            self.theme_cls.theme_style = "Dark"
+            self.is_dark = True
+        self.populate_song_list()  # обновляем список песен, чтобы цвета применились
+
+    def on_key_down(self, window, key, scancode, codepoint, modifiers):
+        # Клавиши громкости (24 - вверх, 25 - вниз)
+        if key in (24, 25):
+            if key == 24:
+                self.current_font_size = min(self.current_font_size + 2, 40)
+            else:
+                self.current_font_size = max(self.current_font_size - 2, 12)
+            self.update_font_sizes()
+            return True
+        return False
+
+    def update_font_sizes(self):
+        if self.sm.current == "song":
+            self.song_screen.ids.lyrics_label.font_size = self.current_font_size
 
 
 if __name__ == "__main__":
