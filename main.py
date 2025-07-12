@@ -109,9 +109,8 @@ class HymnalApp(MDApp):
     current_font_size = NumericProperty(18)
     is_dark = True
 
-    # Цвета и настройки, управляемые темой
     title_text_color = ListProperty([1, 1, 1, 1])  # белый по умолчанию
-    bg_color = ListProperty([0.1, 0.1, 0.1, 1])   # темный фон по умолчанию
+    bg_color = ListProperty([0.188, 0.188, 0.188, 1])   # темный фон по умолчанию
 
     def build(self):
         self.theme_cls.primary_palette = "BlueGray"
@@ -120,7 +119,6 @@ class HymnalApp(MDApp):
 
         Builder.load_string(KV)
 
-        # Песни
         self.songs = [
             {
                 "number": 1,
@@ -154,10 +152,6 @@ class HymnalApp(MDApp):
         self.song_screen = SongScreen(name="song")
         self.sm.add_widget(self.main_screen)
         self.sm.add_widget(self.song_screen)
-
-        # Начальные цвета для темы
-        self.title_text_color = [1, 1, 1, 1]
-        self.bg_color = [0.188, 0.188, 0.188, 1]
 
         self.populate_song_list()
         Window.bind(on_key_down=self.on_key_down)
@@ -194,26 +188,25 @@ class HymnalApp(MDApp):
 
     def toggle_theme(self):
         if self.is_dark:
-            # переключаем на светлую тему
-            self.title_text_color = [0, 0, 0, 1]  # чёрный текст
-            self.bg_color = [1, 1, 1, 1]           # светлый фон
+            self.title_text_color = [0, 0, 0, 1]
+            self.bg_color = [1, 1, 1, 1]
             self.theme_cls.theme_style = "Light"
             self.is_dark = False
         else:
-            # переключаем на темную тему
-            self.title_text_color = [1, 1, 1, 1]  # белый текст
-            self.bg_color = [0.188, 0.188, 0.188, 1]  # тёмно-серый фон
+            self.title_text_color = [1, 1, 1, 1]
+            self.bg_color = [0.188, 0.188, 0.188, 1]
             self.theme_cls.theme_style = "Dark"
             self.is_dark = True
-        self.populate_song_list()  # обновляем список песен, чтобы цвета применились
+        self.populate_song_list()
 
     def on_key_down(self, window, key, scancode, codepoint, modifiers):
-        # Клавиши громкости (24 - вверх, 25 - вниз)
-        if key in (24, 25):
-            if key == 24:
-                self.current_font_size = min(self.current_font_size + 2, 40)
-            else:
-                self.current_font_size = max(self.current_font_size - 2, 12)
+        # volume up = 24, volume down = 25
+        if key == 24:
+            self.current_font_size = min(self.current_font_size + 2, 40)
+            self.update_font_sizes()
+            return True
+        elif key == 25:
+            self.current_font_size = max(self.current_font_size - 2, 12)
             self.update_font_sizes()
             return True
         return False
