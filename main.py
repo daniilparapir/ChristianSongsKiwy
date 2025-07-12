@@ -200,12 +200,14 @@ class HymnalApp(MDApp):
         self.populate_song_list()
 
     def on_key_down(self, window, key, scancode, codepoint, modifiers):
+        # Обработка клавиш громкости (Android) и стрелок вверх/вниз (ПК)
         # volume up = 24, volume down = 25
-        if key == 24:
+        # стрелка вверх = 273, стрелка вниз = 274
+        if key == 24 or key == 273:
             self.current_font_size = min(self.current_font_size + 2, 40)
             self.update_font_sizes()
             return True
-        elif key == 25:
+        elif key == 25 or key == 274:
             self.current_font_size = max(self.current_font_size - 2, 12)
             self.update_font_sizes()
             return True
