@@ -37,17 +37,17 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,kivymd,materialyoucolor,exceptiongroup,asyncgui,asynckivy,android,pillow,filetype
+requirements = python3,kivy,kivymd,materialyoucolor,exceptiongroup,asyncgui,asynckivy,android,filetype
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
 # requirements.source.kivy = ../../kivy
 
 # (str) Presplash of the application
-#presplash.filename = %(source.dir)s/images/presplash.png
+presplash.filename = %(source.dir)s/images/presplash.png
 
 # (str) Icon of the application
-#icon.filename = %(source.dir)s/images/favicon.png
+icon.filename = %(source.dir)s/images/favicon.png
 
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
