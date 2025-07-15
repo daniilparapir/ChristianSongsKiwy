@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = Christian Songs
+title = Песеник
 
 # (str) Package name
-package.name = Песеник
+package.name = ChristianSongs
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = org.test
