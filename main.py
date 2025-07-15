@@ -135,7 +135,6 @@ class SongScreen(MDScreen):
     def toggle_chords(self):
         self.show_chords = not self.show_chords
         app = MDApp.get_running_app()
-        # Найдём песню по заголовку
         for song in app.songs:
             if song["title"] == self.song_title:
                 if self.show_chords and "lyrics_with_chords" in song:
@@ -148,7 +147,6 @@ class SongScreen(MDScreen):
 class HymnalApp(MDApp):
     current_font_size = NumericProperty(18)
     is_dark = True
-
     title_text_color = ListProperty([1, 1, 1, 1])
     bg_color = ListProperty([0.188, 0.188, 0.188, 1])
 
@@ -7201,24 +7199,33 @@ Am                                                    Em
     def populate_song_list(self):
         list_widget = self.main_screen.ids.song_list
         list_widget.clear_widgets()
+        self.song_items = []
         for idx, song in enumerate(self.songs):
             item = OneLineListItem(text=f"{song['number']}. {song['title']}")
             item.bind(on_release=lambda inst, i=idx: self.open_song(i))
             list_widget.add_widget(item)
+            self.song_items.append(item)
+
+    def schedule_filter(self, query):
+        # Отложенный запуск фильтрации, чтобы избежать тормозов при быстром вводе
+        if self._search_event:
+            self._search_event.cancel()
+        self._search_event = Clock.schedule_once(lambda dt: self.filter_songs(query), 0.3)
 
     def filter_songs(self, query):
         query = query.lower().strip()
-        list_widget = self.main_screen.ids.song_list
-        list_widget.clear_widgets()
-        
         for idx, song in enumerate(self.songs):
+            item = self.song_items[idx]
             title = song["title"].lower()
             number = str(song["number"])
-
             if query in title or query in number:
-                item = OneLineListItem(text=f"{song['number']}. {song['title']}")
-                item.bind(on_release=lambda inst, i=idx: self.open_song(i))
-                list_widget.add_widget(item)
+                item.opacity = 1
+                item.disabled = False
+                item.height = dp(48)  # стандартная высота для OneLineListItem
+            else:
+                item.opacity = 0
+                item.disabled = True
+                item.height = 0
 
     def open_song(self, index):
         song = self.songs[index]
@@ -7244,13 +7251,8 @@ Am                                                    Em
             self.is_dark = True
         self.populate_song_list()
 
-    def update_font_size_from_slider(self, value):
-        self.current_font_size = value
-        self.update_font_sizes()
-
     def change_font_size(self, delta):
         self.current_font_size = min(40, max(12, self.current_font_size + delta))
-        self.song_screen.ids.font_slider.value = self.current_font_size
         self.update_font_sizes()
 
     def update_font_sizes(self):
