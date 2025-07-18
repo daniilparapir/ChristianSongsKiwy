@@ -1,20 +1,48 @@
 from kivy.lang import Builder
 from kivy.properties import StringProperty, NumericProperty, ListProperty
 from kivy.metrics import dp
+from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.list import OneLineListItem
 
 KV = '''
-<MainScreen>:
-    canvas.before:
-        Color:
-            rgba: app.bg_color
-        Rectangle:
-            pos: self.pos
-            size: self.size
+MDNavigationLayout:
 
+    ScreenManager:
+        id: screen_manager
+
+        MainScreen:
+            name: "main"
+        SongScreen:
+            name: "song"
+
+    MDNavigationDrawer:
+        id: nav_drawer
+
+        ScrollView:
+            MDBoxLayout:
+                orientation: "vertical"
+                adaptive_height: True
+                padding: "8dp"
+                spacing: "8dp"
+
+                MDLabel:
+                    text: "Меню"
+                    font_style: "H6"
+                    size_hint_y: None
+                    height: self.texture_size[1]
+
+                OneLineListItem:
+                    id: lang_switch_item
+                    text: "Украинские песни"
+                    on_release:
+                        app.switch_language()
+                        app.root.ids.nav_drawer.set_state("close")
+
+
+<MainScreen>:
     FloatLayout:
         MDBoxLayout:
             orientation: "vertical"
@@ -27,8 +55,8 @@ KV = '''
                 elevation: 0
                 md_bg_color: 0.188, 0.188, 0.188, 1
                 specific_text_color: app.title_text_color
-                right_action_items: [["guitar-acoustic", lambda x: root.toggle_chords()], ["theme-light-dark", lambda x: app.toggle_theme()]]
-
+                left_action_items: [["menu", lambda x: app.root.ids.nav_drawer.set_state("open")]]
+                right_action_items: [["guitar-acoustic", lambda x: root.toggle_chords()]]
 
             MDTextField:
                 id: search
@@ -70,8 +98,7 @@ KV = '''
                 elevation: 0
                 md_bg_color: 0.188, 0.188, 0.188, 1
                 specific_text_color: app.title_text_color
-                right_action_items: [["guitar-acoustic", lambda x: root.toggle_chords()], ["theme-light-dark", lambda x: app.toggle_theme()]]
-
+                right_action_items: [["guitar-acoustic", lambda x: root.toggle_chords()]]
 
             ScrollView:
                 MDLabel:
@@ -95,8 +122,7 @@ KV = '''
                     icon: "minus"
                     user_font_size: "32sp"
                     on_release:
-                        app.current_font_size = max(app.current_font_size - 2, 12)
-                        app.update_font_sizes()
+                        app.change_font_size(-2)
 
                 MDLabel:
                     text: f"Размер текста: {app.current_font_size}"
@@ -108,23 +134,13 @@ KV = '''
                     icon: "plus"
                     user_font_size: "32sp"
                     on_release:
-                        app.current_font_size = min(app.current_font_size + 2, 40)
-                        app.update_font_sizes()
-
-
-ScreenManager:
-    id: screen_manager
-
-    MainScreen:
-        name: "main"
-
-    SongScreen:
-        name: "song"
+                        app.change_font_size(2)
 '''
 
 
 class MainScreen(MDScreen):
-    pass
+    def toggle_chords(self):
+        pass  # функция нужна для совместимости с TopBar
 
 
 class SongScreen(MDScreen):
@@ -149,15 +165,23 @@ class HymnalApp(MDApp):
     is_dark = True
     title_text_color = ListProperty([1, 1, 1, 1])
     bg_color = ListProperty([0.188, 0.188, 0.188, 1])
+    current_language = StringProperty("ru")
 
     def build(self):
         self.theme_cls.primary_palette = "BlueGray"
         self.theme_cls.accent_palette = "Amber"
         self.theme_cls.theme_style = "Dark"
 
-        Builder.load_string(KV)
+        self.root = Builder.load_string(KV)
 
-        self.songs = [
+        self.songs = self.get_russian_songs()
+        self._search_event = None
+
+        Clock.schedule_once(lambda dt: self.populate_song_list(), 0.1)
+        return self.root
+
+    def get_russian_songs(self):
+        return [
             {
                 "number": 1,
                 "title": "День за днем",
@@ -167,6 +191,7 @@ class HymnalApp(MDApp):
 Бог даёт нам силу для борьбы. 
 Доверяя Божьим откровеньям, 
 Не страшусь "изменчивой судьбы". 
+
 Тот, чьё сердце любит беспредельно, 
 Каждый день нам лучшее даёт. 
 Скорбь и радость отмеряет верно, 
@@ -177,6 +202,7 @@ class HymnalApp(MDApp):
 С дивной милостью на каждый миг. 
 Все заботы прогоняет сразу, 
 Он - Советник дивный для Своих. 
+
 Нас рука Всевышнего прикрыла, 
 Он - Кормилец и покров Своим. 
 "И как дни, так будет ваша сила!"
@@ -187,6 +213,7 @@ class HymnalApp(MDApp):
 Доверять Тебе, Господь, во всём, 
 Помнить твёрдо все обетованья, 
 Что находим в слове мы Твоём. 
+
 Помоги, встречая труд и горе, 
 Принимать их из руки Твоей; 
 День за днём идти, поднявши взоры 
@@ -197,60 +224,72 @@ class HymnalApp(MDApp):
                 "number": 2,
                 "title": "Дайте свет",
                 "lyrics": """
-                1 куплет:
-                Ночью с моря люди громко вопию 'Дайте свет! Дайте свет!',
-                Покажите к берегу надежный путь.Дайте свет! Дайте свет!,
+1 куплет:
+Ночью с моря люди громко вопию 
+'Дайте свет! Дайте свет!',
+Покажите к берегу надежный путь.
+Дайте свет! Дайте свет!,
 
-                Припев:
-                Дайте свет! Евангельская весть, свет и жизнь несет серцам.
-                Дайте свет! Евангельская весть, да звучит везде всегда!
+Припев:
+Дайте свет! Евангельская весть, 
+Свет и жизнь несет серцам.
+Дайте свет! Евангельская весть, 
+Да звучит везде всегда!
 
-                2 куплет:
-                К нам теперь доходит Македонский зов 'Дайте свет! Дайте свет!',
-                Поспешите проявить Христа любовь. Дайте свет! Дайте свет!
+2 куплет:
+К нам теперь доходит Македонский зов 
+'Дайте свет! Дайте свет!',
+Поспешите проявить Христа любовь. 
+Дайте свет! Дайте свет!
 
-                3 куплет:
-                Постоянною молитвой о других, Дайте свет! Дайте свет!
-                Чтоб Дух Божий погибающих достиг, Дайте свет! Дайте свет!
+3 куплет:
+Постоянною молитвой о других, 
+Дайте свет! Дайте свет!
+Чтоб Дух Божий погибающих достиг, 
+Дайте свет! Дайте свет!
 
-                4 куплет:
-                Непрестанно совершайте трул любви. Дайте свет! Дайте свет!
-                Перед Богом делайте дела свои. Дайте свет! Дайте свет!
+4 куплет:
+Непрестанно совершайте труд любви. 
+Дайте свет! Дайте свет!
+Перед Богом делайте дела свои. 
+Дайте свет! Дайте свет!
                 """
             },
             {
                 "number": 3,
                 "title": "С ликованьем прославляем",
                 "lyrics": """
-1 куплет:  
-C ликованьем прославляем 
-Бога славы и любви.
-Пред Ним сердце открываем,
-Просим: милость нам яви!
-Разгони неверья тучи, 
-Удали сомнений тьму,
-Направляй нас к жизни лучшей, 
-Мир дай сердцу и уму.
+1. С ликованьем прославляем
+Бога славы и любви!
+Пред ним сердце открываем –
+Просим милость нам яви!
 
-2 куплет:  
-Небо и земля чудесно 
-Возвещают мощь Твою.
-Звёзды с ангелами вместе 
-Славу Вечному поют.
-Луг и поле, лес и горы, 
+Разгони неверья тучи,
+Удали сомнений тьму,
+Направляй нас к жизни лучшей,
+Мир дай сердцу и уму!
+
+
+2. Небо и земля чудесно,
+Возвещают мощь Твою!
+Звёзды с ангелами вместе
+Славу Вечному поют!
+
+Луг и поле, лес и горы,
 Вод потоки и моря,
 Пенье птичек, туч узоры
-О Творце нам говорят.
+О Творце нам говорят!
 
-3 куплет:  
-Братья, песню подхватите
-Что с рассветом началась:
-Бог любви наш искупитель
+
+3. Братья песню подхватите,
+Что с рассветом началась.
+Бог любви, наш Искупитель,
 Братолюбье вяжет нас.
-С дружным пеньем вступайте
-Победители над злом
+
+С дружным пеньем выступайте
+Победители над злом.
 Жизнь и радость возвещайте
-Непрестанно день за день.
+Непрерстанно день за днём!
                 """
             },
              {
@@ -278,8 +317,8 @@ C ликованьем прославляем
 Назвал рабом Своим.
 Дар любви, так дивной нам,
 Пред всеми воспою;
-Силы все Христу отдам
-И жизнь мою.
+По Его пойду следам
+Всю жизнь мою.
 
 3. Погибающий! молись!
 Господь тебя спасёт.
@@ -325,43 +364,31 @@ C ликованьем прославляем
     "lyrics_with_chords": """\
 
 1 куплет:  
-    C               Am           G        C     F                  C
+            C                             Am                     F               C                       
 Свят, Свят, Свят Господь Бог, Царь Всемогущий!
-G                   Am           G          D      D7       G     
+C                   Am           D          G        
 Рано утром песни с радостью поем Ему.
-C                   Am           G       C       F                      C
+C                   Am           F       C                            
 Свят, Свят, Свят Господь Бог, милостивый, сильный!
-Am     C     F Am    F       G         C
+Am        F       G         C
 Бог триединый, вечная любовь.
 
 2 куплет:  
-     C               Am          G       C       F                       C
-Свят, Свят, Свят Господь Бог! Честь и поклоненье
-  G               Am       G          D             D7     G     
+Свят, Свят, Свят Господь Бог! Честь и поклоненье   
 Воздают Ему святые в славных небесах!
-C            Am   G   C   F                       C
 Ангельские силы падают в смирении:
-Am  C         F Am    F        G          C
 Сущий от века милостив и благ.
 
 3 куплет:  
-     C               Am          G        C     F                      C
-Свят, Свят, Свят Господь Бог, тайной облеченный!
-     G                            Am         G               D       D7       G     
+Свят, Свят, Свят Господь Бог, тайной облеченный!   
 Смертным нельзя видеть Божьей славы неземной.
-C           Am            G   C     F                       C
 Только Он над всеми, Бог Превознесенный,
-Am    C           F  Am      F          G        C
 Дивный и крепкий, чистый и святой!
 
 4 куплет:  
-    C                Am           G       C      F                  C
 Свят, Свят, Свят Господь Бог, Царь Всемогущий!
-    G                  Am      G          D     D7       G     
 Славят Божье Имя небо, море и земля!
-C                   Am            G      C          F                     C
 Свят, Свят, Свят Господь Бог, - вторят наши души!
-Am  C       F  Am   F     G        C
 Вечному Богу слава и хвала!
 
 """  
@@ -520,9 +547,9 @@ Am  C       F  Am   F     G        C
                 "lyrics": """
 
 1.Чудесный Спаситель - Христос, мой Господь,
-чудесный Спаситель живой!
+Чудесный Спаситель живой!
 В скале благодатной мне отдых даёт,
-там радость и верный покой.
+Там радость и вечный покой.
 
 
 ПРИПЕВ::
@@ -540,9 +567,9 @@ Am  C       F  Am   F     G        C
 
 
 3.Не счесть Его милостей дивных ко мне,
-безбрежен любви океан.
+Безбрежен любви океан.
 Пою пред народом, пою в тишине,
-что дивный Спаситель мне дан.
+Что дивный Спаситель мне дан.
 
 4.Одетый в нетленье, при звуках трубы,
 Я встречу Христа самого:
@@ -7180,7 +7207,166 @@ Am                                                    Em
 
 
             
-        ]         
+        ] 
+
+    def get_ukrainian_songs(self):
+        return [
+            {
+    "number": 1,
+    "title": "А ми бажаєм щастя",
+    "lyrics": """
+1 Куплет:
+
+А ми бажаєм щастя,
+А ми бажаєм щастя,
+А ми бажаєм щастя,
+А ми бажаєм щастя, щастя у Христі!
+
+2 Куплет:
+
+А ми бажаєм радість,
+А ми бажаєм радість,
+А ми бажаєм радість,
+А ми бажаєм радість, радість у Христі!
+
+3 Куплет:
+
+А ми бажаєм миру,
+А ми бажаєм миру,
+А ми бажаєм миру,
+А ми бажаєм миру, миру у Христі!
+
+4 Куплет:
+
+А ми бажаєм любов,
+А ми бажаєм любов,
+А ми бажаєм любов,
+А ми бажаєм любов, любов у Христі!
+
+5 Куплет:
+
+А ми бажаєм щастя,
+А ми бажаєм радість,
+А ми бажаєм миру,
+А ми бажаєм щастя, радість, миру у Христі!
+""",
+
+    "lyrics_with_chords": """
+1 Куплет:  
+                    Am
+А ми бажаєм щастя,
+                    A         Dm
+А ми бажаєм щастя,
+                    E        Am
+А ми бажаєм щастя,
+                    E                                                 Am
+А ми бажаєм щастя, щастя у Христі!
+
+2 Куплет:  
+А ми бажаєм радість,
+А ми бажаєм радість,
+А ми бажаєм радість,
+А ми бажаєм радість, радість у Христі!
+
+3 Куплет:  
+А ми бажаєм миру,
+А ми бажаєм миру,
+А ми бажаєм миру,
+А ми бажаєм миру, миру у Христі!
+
+4 Куплет:  
+А ми бажаєм любов,
+А ми бажаєм любов,
+А ми бажаєм любов,
+А ми бажаєм любов, любов у Христі!
+
+5 Куплет:  
+А ми бажаєм щастя,
+А ми бажаєм радість,
+А ми бажаєм миру,
+А ми бажаєм щастя, радість, миру у Христі!
+"""
+},
+
+{
+    "number": 2,
+    "title": "На скелі мудрий свій дім",
+    "lyrics": """
+1 куплет:
+
+На скелі мудрий свій дім збудував.
+На скелі мудрий свій дім збудував.
+На скелі мудрий свій дім збудував,
+І дощ полив!
+І дощ полив - і вода піднялась.
+І дощ полив - і вода піднялась.
+І дощ полив - і вода піднялась,
+І дім встояв!
+2 куплет:
+
+Немудрий дім на піску збудував.
+Немудрий дім на піску збудував.
+Немудрий дім на піску збудував,
+І дощ полив!
+І дощ полив - і вода піднялась!
+І дощ полив - і вода піднялась!
+І дощ полив - і вода піднялась,
+І дім цей впав!
+3 куплет:
+
+Хто Слово Боже сповняє в житті,
+Хто Слово Боже сповняє в житті,
+Хто Слово Боже сповняє в житті,
+Розумний той!
+Прийде час і біди, і скорбот,
+Прийде час і біди, і скорбот,
+Прийде час і біди, і скорбот,
+А він встоїть!
+""",
+    "lyrics_with_chords": """
+1 куплет:  
+     A                                C
+На скелі мудрий свій дім збудував.
+     Em                                Am
+На скелі мудрий свій дім збудував.
+     Dm                              Am          C
+На скелі мудрий свій дім збудував,
+ Dm  Em  Am
+І дощ полив!
+
+ A                             C
+І дощ полив - і вода піднялась.
+ Em                            Am
+І дощ полив - і вода піднялась.
+ Dm                           Am            C
+І дощ полив - і вода піднялась,
+ Dm  Em  Am
+І дім встояв!
+
+2 куплет:  
+Немудрий дім на піску збудував.
+Немудрий дім на піску збудував.
+Немудрий дім на піску збудував,
+І дощ полив!
+
+І дощ полив - і вода піднялась!
+І дощ полив - і вода піднялась!
+І дощ полив - і вода піднялась,
+І дім цей впав!
+
+3 куплет:  
+Хто Слово Боже сповняє в житті,
+Хто Слово Боже сповняє в житті,
+Хто Слово Боже сповняє в житті,
+Розумний той!
+
+Прийде час і біди, і скорбот,
+Прийде час і біди, і скорбот,
+Прийде час і біди, і скорбот,
+А він встоїть!
+"""
+},
+        ]        
 
         self.sm = MDScreenManager()
         self.main_screen = MainScreen(name="main")
@@ -7192,8 +7378,21 @@ Am                                                    Em
 
         return self.sm
 
+    def switch_language(self):
+        lang_label = self.root.ids.lang_switch_item
+        if self.current_language == "ru":
+            self.current_language = "ua"
+            lang_label.text = "Русские песни"
+            self.songs = self.get_ukrainian_songs()
+        else:
+            self.current_language = "ru"
+            lang_label.text = "Украинские песни"
+            self.songs = self.get_russian_songs()
+        self.populate_song_list()
+
     def populate_song_list(self):
-        list_widget = self.main_screen.ids.song_list
+        screen = self.root.ids.screen_manager.get_screen("main")
+        list_widget = screen.ids.song_list
         list_widget.clear_widgets()
         self.song_items = []
         for idx, song in enumerate(self.songs):
@@ -7201,12 +7400,6 @@ Am                                                    Em
             item.bind(on_release=lambda inst, i=idx: self.open_song(i))
             list_widget.add_widget(item)
             self.song_items.append(item)
-
-    def schedule_filter(self, query):
-        # Отложенный запуск фильтрации, чтобы избежать тормозов при быстром вводе
-        if self._search_event:
-            self._search_event.cancel()
-        self._search_event = Clock.schedule_once(lambda dt: self.filter_songs(query), 0.3)
 
     def filter_songs(self, query):
         query = query.lower().strip()
@@ -7217,7 +7410,7 @@ Am                                                    Em
             if query in title or query in number:
                 item.opacity = 1
                 item.disabled = False
-                item.height = dp(48)  # стандартная высота для OneLineListItem
+                item.height = dp(48)
             else:
                 item.opacity = 0
                 item.disabled = True
@@ -7225,14 +7418,15 @@ Am                                                    Em
 
     def open_song(self, index):
         song = self.songs[index]
-        self.song_screen.song_title = song["title"]
-        self.song_screen.show_chords = False
-        self.song_screen.lyrics = song["lyrics"]
-        self.song_screen.ids.lyrics_label.font_size = self.current_font_size
-        self.sm.current = "song"
+        screen = self.root.ids.screen_manager.get_screen("song")
+        screen.song_title = song["title"]
+        screen.lyrics = song["lyrics"]
+        screen.show_chords = False
+        screen.ids.lyrics_label.font_size = self.current_font_size
+        self.root.ids.screen_manager.current = "song"
 
     def back_to_list(self):
-        self.sm.current = "main"
+        self.root.ids.screen_manager.current = "main"
 
     def toggle_theme(self):
         if self.is_dark:
@@ -7252,8 +7446,9 @@ Am                                                    Em
         self.update_font_sizes()
 
     def update_font_sizes(self):
-        if self.sm.current == "song":
-            self.song_screen.ids.lyrics_label.font_size = self.current_font_size
+        if self.root.ids.screen_manager.current == "song":
+            screen = self.root.ids.screen_manager.get_screen("song")
+            screen.ids.lyrics_label.font_size = self.current_font_size
 
 
 if __name__ == "__main__":
