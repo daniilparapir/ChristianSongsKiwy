@@ -3,9 +3,7 @@ from kivy.properties import StringProperty, NumericProperty, ListProperty
 from kivy.metrics import dp
 from kivy.clock import Clock
 from kivymd.app import MDApp
-from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.list import OneLineListItem
 
 KV = '''
 MDNavigationLayout:
@@ -69,9 +67,18 @@ MDNavigationLayout:
                 hint_text_color: 0.7, 0.7, 0.7, 1
                 line_color_focus: (1, 1, 1, 1) if app.is_dark else (0, 0, 0, 1)
 
-            ScrollView:
-                MDList:
-                    id: song_list
+            RecycleView:
+                id: song_rv
+                viewclass: "OneLineListItem"
+                scroll_type: ['bars', 'content']
+                bar_width: dp(4)
+
+                RecycleBoxLayout:
+                    default_size: None, dp(56)
+                    default_size_hint: 1, None
+                    size_hint_y: None
+                    height: self.minimum_height
+                    orientation: 'vertical'
 
 
 <SongScreen>:
@@ -140,7 +147,7 @@ MDNavigationLayout:
 
 class MainScreen(MDScreen):
     def toggle_chords(self):
-        pass  # функция нужна для совместимости с TopBar
+        pass
 
 
 class SongScreen(MDScreen):
@@ -153,10 +160,7 @@ class SongScreen(MDScreen):
         app = MDApp.get_running_app()
         for song in app.songs:
             if song["title"] == self.song_title:
-                if self.show_chords and "lyrics_with_chords" in song:
-                    self.lyrics = song["lyrics_with_chords"]
-                else:
-                    self.lyrics = song["lyrics"]
+                self.lyrics = song.get("lyrics_with_chords", song["lyrics"]) if self.show_chords else song["lyrics"]
                 break
 
 
@@ -175,7 +179,7 @@ class HymnalApp(MDApp):
         self.root = Builder.load_string(KV)
 
         self.songs = self.get_russian_songs()
-        self._search_event = None
+        self.filtered_songs = self.songs.copy()
 
         Clock.schedule_once(lambda dt: self.populate_song_list(), 0.1)
         return self.root
@@ -10894,16 +10898,6 @@ Am                                                    Em
 },
         ]        
 
-        self.sm = MDScreenManager()
-        self.main_screen = MainScreen(name="main")
-        self.song_screen = SongScreen(name="song")
-        self.sm.add_widget(self.main_screen)
-        self.sm.add_widget(self.song_screen)
-
-        self.populate_song_list()
-
-        return self.sm
-
     def switch_language(self):
         lang_label = self.root.ids.lang_switch_item
         if self.current_language == "ru":
@@ -10914,36 +10908,29 @@ Am                                                    Em
             self.current_language = "ru"
             lang_label.text = "Украинские песни"
             self.songs = self.get_russian_songs()
+        self.filtered_songs = self.songs.copy()
         self.populate_song_list()
 
     def populate_song_list(self):
-        screen = self.root.ids.screen_manager.get_screen("main")
-        list_widget = screen.ids.song_list
-        list_widget.clear_widgets()
-        self.song_items = []
-        for idx, song in enumerate(self.songs):
-            item = OneLineListItem(text=f"{song['number']}. {song['title']}")
-            item.bind(on_release=lambda inst, i=idx: self.open_song(i))
-            list_widget.add_widget(item)
-            self.song_items.append(item)
+        rv = self.root.ids.screen_manager.get_screen("main").ids.song_rv
+        rv.data = [
+            {
+                "text": f"{song['number']}. {song['title']}",
+                "on_release": lambda x=None, i=idx: self.open_song(i)
+            }
+            for idx, song in enumerate(self.filtered_songs)
+        ]
 
     def filter_songs(self, query):
         query = query.lower().strip()
-        for idx, song in enumerate(self.songs):
-            item = self.song_items[idx]
-            title = song["title"].lower()
-            number = str(song["number"])
-            if query in title or query in number:
-                item.opacity = 1
-                item.disabled = False
-                item.height = dp(48)
-            else:
-                item.opacity = 0
-                item.disabled = True
-                item.height = 0
+        self.filtered_songs = [
+            song for song in self.songs
+            if query in song["title"].lower() or query in str(song["number"])
+        ]
+        self.populate_song_list()
 
     def open_song(self, index):
-        song = self.songs[index]
+        song = self.filtered_songs[index]
         screen = self.root.ids.screen_manager.get_screen("song")
         screen.song_title = song["title"]
         screen.lyrics = song["lyrics"]
@@ -10955,17 +10942,10 @@ Am                                                    Em
         self.root.ids.screen_manager.current = "main"
 
     def toggle_theme(self):
-        if self.is_dark:
-            self.title_text_color = [0, 0, 0, 1]
-            self.bg_color = [1, 1, 1, 1]
-            self.theme_cls.theme_style = "Light"
-            self.is_dark = False
-        else:
-            self.title_text_color = [1, 1, 1, 1]
-            self.bg_color = [0.188, 0.188, 0.188, 1]
-            self.theme_cls.theme_style = "Dark"
-            self.is_dark = True
-        self.populate_song_list()
+        self.is_dark = not self.is_dark
+        self.title_text_color = [0, 0, 0, 1] if not self.is_dark else [1, 1, 1, 1]
+        self.bg_color = [1, 1, 1, 1] if not self.is_dark else [0.188, 0.188, 0.188, 1]
+        self.theme_cls.theme_style = "Light" if not self.is_dark else "Dark"
 
     def change_font_size(self, delta):
         self.current_font_size = min(40, max(12, self.current_font_size + delta))
