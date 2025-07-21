@@ -193,8 +193,8 @@ class HymnalApp(MDApp):
 
     def check_for_updates(self):
         token = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXX"  # Твой GitHub токен
-        username = "ТВОЁ_ИМЯ_ПОЛЬЗОВАТЕЛЯ"
-        repo = "НАЗВАНИЕ_РЕПОЗИТОРИЯ"
+        username = "daniilparapir"
+        repo = "ChristianSongsKiwy"
 
         try:
             latest_release = get_latest_release(token, username, repo)
