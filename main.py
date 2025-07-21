@@ -191,21 +191,19 @@ class HymnalApp(MDApp):
 
         return self.root
 
-    def check_latest_release(self):
-        token = "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"
-        headers = {"Authorization": f"token {token}"}
-        url = "https://api.github.com/repos/USERNAME/REPO/releases/latest"
+    def check_for_updates(self):
+        token = "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXX"  # Твой GitHub токен
+        username = "ТВОЁ_ИМЯ_ПОЛЬЗОВАТЕЛЯ"
+        repo = "НАЗВАНИЕ_РЕПОЗИТОРИЯ"
 
         try:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                latest_release = response.json()
-                print("Последняя версия:", latest_release["tag_name"])
-                # Здесь можно сравнить с текущей версией и что-то сделать
-            else:
-                print("Ошибка при получении версии:", response.status_code)
+            latest_release = get_latest_release(token, username, repo)
+            latest_version = latest_release["tag_name"]
+            print("Последняя версия на GitHub:", latest_version)
+            # Здесь можешь сравнить с текущей версией и предложить обновить
         except Exception as e:
-            print("Ошибка запроса к GitHub API:", e)
+            print("Ошибка при проверке обновления:", e)
+
     def get_russian_songs(self):
         return [
             {
