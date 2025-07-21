@@ -4,6 +4,9 @@ from kivy.metrics import dp
 from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
+from github_api import get_latest_release
+import requests
+import os
 
 KV = '''
 MDNavigationLayout:
@@ -182,8 +185,27 @@ class HymnalApp(MDApp):
         self.filtered_songs = self.songs.copy()
 
         Clock.schedule_once(lambda dt: self.populate_song_list(), 0.1)
+
+        # Запускаем проверку обновления
+        self.check_latest_release()
+
         return self.root
 
+    def check_latest_release(self):
+        token = "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"
+        headers = {"Authorization": f"token {token}"}
+        url = "https://api.github.com/repos/USERNAME/REPO/releases/latest"
+
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                latest_release = response.json()
+                print("Последняя версия:", latest_release["tag_name"])
+                # Здесь можно сравнить с текущей версией и что-то сделать
+            else:
+                print("Ошибка при получении версии:", response.status_code)
+        except Exception as e:
+            print("Ошибка запроса к GitHub API:", e)
     def get_russian_songs(self):
         return [
             {
@@ -192,7 +214,7 @@ class HymnalApp(MDApp):
                 "lyrics": """\
 1 куплет:   
 День за днём и каждое мгновенье 
-Бог даёт нам силу для борьбы. 
+Бог даёт мне силу для борьбы. 
 Доверяя Божьим откровеньям, 
 Не страшусь "изменчивой судьбы". 
 
@@ -210,7 +232,7 @@ class HymnalApp(MDApp):
 Нас рука Всевышнего прикрыла, 
 Он - Кормилец и покров Своим. 
 "И как дни, так будет ваша сила!"
-- Обещанье дал Он им.
+Обещанье дал Он им.
 
 3 куплет:   
 Помоги во всяком испытаньи 
@@ -672,12 +694,12 @@ Am        F       G         C
 Пойте песнь в день похорон:
 Нам Христос жизнь принёс!
 
-4. Весть несите вдаль и вширь:
+4. Весть несётся вдаль и вширь:
 Нам Христос жизнь принёс!
 Да ликует целый мир:
 Нам Христос жизнь принёс!
 
-О спасеньи даровом
+О спасеньи дорогом
 Возвестите в царстве слёз…
 Это вечный наш псалом:
 Нам Христос жизнь принёс!
@@ -10668,7 +10690,7 @@ Am                                                    Em
 },
 
 {
-    "number": 128,
+    "number": 129,
     "title": "Я смотрю на небес высоту",
     "lyrics": """
 1 куплет:
