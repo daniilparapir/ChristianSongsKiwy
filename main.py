@@ -173,6 +173,7 @@ class HymnalApp(MDApp):
     title_text_color = ListProperty([1, 1, 1, 1])
     bg_color = ListProperty([0.188, 0.188, 0.188, 1])
     current_language = StringProperty("ru")
+    current_version = "1.0.0"
 
     def build(self):
         self.theme_cls.primary_palette = "BlueGray"
